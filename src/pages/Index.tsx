@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Header from '@/components/Header';
 import ProductCard from '@/components/ProductCard';
 import Cart, { CartItem } from '@/components/Cart';
 import CheckoutForm from '@/components/CheckoutForm';
+import CatalogFilters from '@/components/CatalogFilters';
 import { Card, CardContent } from '@/components/ui/card';
 import Icon from '@/components/ui/icon';
 
@@ -12,6 +13,7 @@ interface Product {
   description: string;
   price: number;
   image: string;
+  subject: string;
 }
 
 const products: Product[] = [
@@ -20,6 +22,7 @@ const products: Product[] = [
     title: 'Рабочая тетрадь по математике',
     description: 'Для учащихся 5-6 классов. Содержит задачи разного уровня сложности.',
     price: 350,
+    subject: 'Математика',
     image: 'https://cdn.poehali.dev/projects/961d7480-c848-4e4e-a051-e66267102eef/files/86f65c7c-03ba-46e4-9e7a-607ee7eec6f3.jpg',
   },
   {
@@ -27,6 +30,7 @@ const products: Product[] = [
     title: 'Рабочая тетрадь по русскому языку',
     description: 'Упражнения для развития грамотности и понимания языка.',
     price: 320,
+    subject: 'Русский язык',
     image: 'https://cdn.poehali.dev/projects/961d7480-c848-4e4e-a051-e66267102eef/files/7210794b-0fd7-4322-8f3d-36dbcde1826f.jpg',
   },
   {
@@ -34,6 +38,7 @@ const products: Product[] = [
     title: 'Рабочая тетрадь по английскому',
     description: 'Практические задания для изучения английского языка.',
     price: 380,
+    subject: 'Английский',
     image: 'https://cdn.poehali.dev/projects/961d7480-c848-4e4e-a051-e66267102eef/files/86f65c7c-03ba-46e4-9e7a-607ee7eec6f3.jpg',
   },
   {
@@ -41,6 +46,7 @@ const products: Product[] = [
     title: 'Рабочая тетрадь по физике',
     description: 'Задачи и эксперименты для практического понимания физики.',
     price: 400,
+    subject: 'Физика',
     image: 'https://cdn.poehali.dev/projects/961d7480-c848-4e4e-a051-e66267102eef/files/7210794b-0fd7-4322-8f3d-36dbcde1826f.jpg',
   },
   {
@@ -48,6 +54,7 @@ const products: Product[] = [
     title: 'Рабочая тетрадь по химии',
     description: 'Практические работы и задачи по основам химии.',
     price: 390,
+    subject: 'Химия',
     image: 'https://cdn.poehali.dev/projects/961d7480-c848-4e4e-a051-e66267102eef/files/86f65c7c-03ba-46e4-9e7a-607ee7eec6f3.jpg',
   },
   {
@@ -55,6 +62,7 @@ const products: Product[] = [
     title: 'Рабочая тетрадь по биологии',
     description: 'Интересные задания для изучения живой природы.',
     price: 360,
+    subject: 'Биология',
     image: 'https://cdn.poehali.dev/projects/961d7480-c848-4e4e-a051-e66267102eef/files/7210794b-0fd7-4322-8f3d-36dbcde1826f.jpg',
   },
 ];
@@ -63,6 +71,32 @@ export default function Index() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 400]);
+
+  const allSubjects = useMemo(() => {
+    return Array.from(new Set(products.map((p) => p.subject)));
+  }, []);
+
+  const filteredProducts = useMemo(() => {
+    return products.filter((product) => {
+      const matchesSubject =
+        selectedSubjects.length === 0 || selectedSubjects.includes(product.subject);
+      const matchesPrice = product.price >= priceRange[0] && product.price <= priceRange[1];
+      return matchesSubject && matchesPrice;
+    });
+  }, [selectedSubjects, priceRange]);
+
+  const handleSubjectToggle = (subject: string) => {
+    setSelectedSubjects((prev) =>
+      prev.includes(subject) ? prev.filter((s) => s !== subject) : [...prev, subject]
+    );
+  };
+
+  const handleResetFilters = () => {
+    setSelectedSubjects([]);
+    setPriceRange([0, 400]);
+  };
 
   const handleAddToCart = (productId: number) => {
     const product = products.find((p) => p.id === productId);
@@ -139,10 +173,33 @@ export default function Index() {
       <section id="catalog" className="py-16">
         <div className="container mx-auto px-4">
           <h2 className="text-3xl font-bold mb-8 text-center text-foreground">Каталог товаров</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {products.map((product) => (
-              <ProductCard key={product.id} {...product} onAddToCart={handleAddToCart} />
-            ))}
+          <div className="grid lg:grid-cols-4 gap-6">
+            <div className="lg:col-span-1">
+              <CatalogFilters
+                subjects={allSubjects}
+                selectedSubjects={selectedSubjects}
+                onSubjectToggle={handleSubjectToggle}
+                priceRange={priceRange}
+                maxPrice={400}
+                onPriceChange={setPriceRange}
+                onReset={handleResetFilters}
+              />
+            </div>
+            <div className="lg:col-span-3">
+              {filteredProducts.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {filteredProducts.map((product) => (
+                    <ProductCard key={product.id} {...product} onAddToCart={handleAddToCart} />
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-16 text-center">
+                  <Icon name="Search" className="h-16 w-16 text-muted-foreground mb-4" />
+                  <h3 className="text-xl font-semibold mb-2">Товары не найдены</h3>
+                  <p className="text-muted-foreground mb-4">Попробуйте изменить параметры фильтра</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </section>
